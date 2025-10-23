@@ -1,12 +1,12 @@
 import React, { useEffect, useState,useRef } from 'react';
 import { GetSocket,formatChatTime } from '../utility/utility';
 import peer from '../utility/peerService.js'
+const serverUrl=import.meta.env.VITE_SERVER_URL
 
 function ChatPage({socket=null}) {
   const [isConnected, setIsConnected] = useState(false);
   const [messages, setMessages] = useState([]);
   const [reciverSocketId, setReciverSocketId] = useState(null);
-
   const [inputText, setInputText] = useState({
     text: '',
     conversationId: '68e66b316f3ae4b2aab253f3',
@@ -16,7 +16,6 @@ function ChatPage({socket=null}) {
   });
 
   const scrollRef = useRef(null);
-
   const [pc] = useState(
     new RTCPeerConnection({
       iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
@@ -57,8 +56,12 @@ function ChatPage({socket=null}) {
 
   // ✅ Socket Listeners
   useEffect(() => {
-    if (!socket) return;
-
+    
+    if (!socket){
+      console.log('socket is not initilize');
+      return;
+    };
+  
     socket.on('connect', () => {
       setIsConnected(true);
     });
@@ -173,7 +176,7 @@ function ChatPage({socket=null}) {
       }}
       style={{borderBottom:"1px solid #ddd",flexDirection:"row",display:"flex",padding:"10px"}}>
         <img 
-          src={user.dp?`http://192.168.30.197:8000/whatsapp/static/${user.dp}`: 'https://via.placeholder.com/50'} 
+          src={user.dp?`${serverUrl}/whatsapp/static/${user.dp}`: 'https://techtt.site/html/getFile/Assets/icons/profile-icon.jpg'} 
           alt={user.name} 
           style={{width:45,height:45,borderRadius:25,marginRight:10}} 
         />
@@ -194,7 +197,7 @@ function ChatPage({socket=null}) {
       <div style={styles.infoBox}>
         <p>{inputText.chattingWith} ID: {inputText.reciverId || "Connecting..."}</p>
         <p style={{display:'flex',flexDirection:'row'}}>Status: {isConnected ? "🟢 Connected" : "🔴 Disconnected"},<span style={{fontSize:'12px'}}>socketId { reciverSocketId}</span></p>
-        <img src={`http://192.168.30.197:8000/whatsapp/static/${inputText.dp}`} alt="avatar" width={50} height={50} 
+        <img src={`${serverUrl}/whatsapp/static/${inputText.dp}`} alt="avatar" width={50} height={50} 
         style={{borderRadius:25,position:'absolute',top:-30,right:5,backgroundColor:'#fff',padding:'2px'}}/>
       </div>
 

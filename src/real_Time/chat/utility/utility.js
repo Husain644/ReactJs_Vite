@@ -1,13 +1,19 @@
 import { io } from 'socket.io-client';
 export async function GetSocket(senderId){
-    const socket = io(`http://192.168.30.197:8000/whatsapp`,
+try {
+      const socket = io(`${import.meta.env.VITE_SERVER_URL}/whatsapp`,
         {
         extraHeaders: {
         extra: "some-value",
         myuserid:'68eb87e0754c8327d11004e0',
         Authorization: "Bearer my-secret-token"
     }})
+    console.log('socket is initilized')
         return socket
+} catch (error) {
+  console.log('error is - ',error)
+}
+
 }
 
 export function formatChatTime(isoString) {
