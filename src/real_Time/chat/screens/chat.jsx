@@ -1,12 +1,13 @@
 import React, { useEffect, useState,useRef } from 'react';
 import { GetSocket,formatChatTime } from '../utility/utility';
-import peer from '../utility/peerService.js'
+import ReactPlayer from 'react-player'
 const serverUrl=import.meta.env.VITE_SERVER_URL
 
 function ChatPage({socket=null}) {
   const [isConnected, setIsConnected] = useState(false);
   const [messages, setMessages] = useState([]);
   const [reciverSocketId, setReciverSocketId] = useState(null);
+  const [show,setShow]=useState(false)
   const [inputText, setInputText] = useState({
     text: '',
     conversationId: '68e66b316f3ae4b2aab253f3',
@@ -22,23 +23,26 @@ function ChatPage({socket=null}) {
     })
   );
 
-  const localStreamRef = useRef(null);
-  const remoteAudioRef = useRef();
+  const localStreamRef = useRef();
+  const remoteStreamRef = useRef();
   const [users, setAllUsers] = useState([]);
 
   // ✅ Get Media
   const getMedia = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      localStreamRef.current = stream;
-
+      const stream = await navigator.mediaDevices.getUserMedia({ video:true,audio: true });
+      
+      if(localStreamRef.current){
+        localStreamRef.current.srcObject=stream
+      }
+      
       stream.getTracks().forEach(track => {
         pc.addTrack(track, stream);
       });
-
+      
       pc.ontrack = (event) => {
         const [remoteStream] = event.streams;
-        remoteAudioRef.current.srcObject = remoteStream;
+        remoteStreamRef.current.srcObject = remoteStream;
       };
 
       pc.onicecandidate = (event) => {
@@ -49,11 +53,27 @@ function ChatPage({socket=null}) {
           });
         }
       };
+      setShow(()=>true)
     } catch (error) {
       console.error('Error accessing microphone:', error);
     }
   };
+  // ✅ Stop streamming
+  const stopStream=()=>{
+    localStreamRef.current.srcObject.getTracks().forEach(track => track.stop());
+   setShow(false)
+  }
+    // ✅ Start Call
+  const startCall = async () => {
+    if (!reciverSocketId) {
+      alert('Select a user or ensure reciverSocketId is available');
+      return;
+    }
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    socket.emit('offer', { offer:pc.localDescription, to: reciverSocketId });
 
+  };
   // ✅ Socket Listeners
   useEffect(() => {
     
@@ -80,16 +100,17 @@ function ChatPage({socket=null}) {
 
     // ✅ OFFER
     socket.on('offer', async ({ offer, from }) => {
-      setReciverSocketId(from);
+      console.log('offer execute',offer,from)
+      // setReciverSocketId(from);
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      socket.emit('answer', { answer, to: reciverSocketId });
+      socket.emit('answer', { answer:pc.localDescription, to:from });
     });
 
     // ✅ ANSWER
     socket.on('answer', async ({ answer }) => {
-      console.log(answer)
+      console.log('answer execute',answer)
       await pc.setRemoteDescription(new RTCSessionDescription(answer));
     });
 
@@ -112,12 +133,13 @@ function ChatPage({socket=null}) {
       pc.close();
       localStreamRef.current?.getTracks().forEach(track => track.stop());
       localStreamRef.current = null;
-      if (remoteAudioRef.current) {
-        remoteAudioRef.current.srcObject = null;
+      if (remoteStreamRef.current) {
+        remoteStreamRef.current.srcObject = null;
       }
       setIsConnected(false);
     };
   }, [socket, pc]);
+
 
   // ✅ Send Message
   const sendMessage = () => {
@@ -128,7 +150,11 @@ function ChatPage({socket=null}) {
       text: inputText.text.trim(),
       time: new Date().toISOString()
     };
-    socket.emit('message', data);
+     try {
+        socket.emit('message', data);
+     } catch (error) {
+      console.log(error)
+     }
     setMessages((prev) => [...prev, { text: inputText.text, sender: 'me', time: data.time }]);
     setInputText({ ...inputText, text: '' });
   };
@@ -145,7 +171,7 @@ function ChatPage({socket=null}) {
   useEffect(() => {
     async function fetchUsers() {
       try {
-        const response = await fetch('http://localhost:8000/whatsapp/all');
+        const response = await fetch(`${serverUrl}/whatsapp/all`);
         const data = await response.json();
         setAllUsers(data.allUser);
       } catch (error) {
@@ -155,16 +181,7 @@ function ChatPage({socket=null}) {
     fetchUsers();
   }, []);
 
-  // ✅ Start Call
-  const startCall = async () => {
-    if (!reciverSocketId) {
-      alert('Select a user or ensure reciverSocketId is available');
-      return;
-    }
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    socket.emit('offer', { offer, to: reciverSocketId });
-  };
+
 
   return (
  <div style={styles.containerMain}>
@@ -176,7 +193,7 @@ function ChatPage({socket=null}) {
       }}
       style={{borderBottom:"1px solid #ddd",flexDirection:"row",display:"flex",padding:"10px"}}>
         <img 
-          src={user.dp?`${serverUrl}/whatsapp/static/${user.dp}`: 'https://techtt.site/html/getFile/Assets/icons/profile-icon.jpg'} 
+          src={user.dp?`${serverUrl}/whatsapp/static/assets/user/images/${user.dp}`: 'https://techtt.site/html/getFile/Assets/icons/profile-icon.jpg'} 
           alt={user.name} 
           style={{width:45,height:45,borderRadius:25,marginRight:10}} 
         />
@@ -192,12 +209,13 @@ function ChatPage({socket=null}) {
       <div style={{display:'flex',flexDirection:'row',gap:'10px'}}>  
         <button onClick={getMedia}>Ready to  Call</button>
         <button onClick={startCall}>Start Call</button>
-      <audio autoPlay ref={remoteAudioRef}></audio></div>
+        <button onClick={stopStream} >stope streamming</button>
+      </div>
       {/* Socket info */}
       <div style={styles.infoBox}>
         <p>{inputText.chattingWith} ID: {inputText.reciverId || "Connecting..."}</p>
         <p style={{display:'flex',flexDirection:'row'}}>Status: {isConnected ? "🟢 Connected" : "🔴 Disconnected"},<span style={{fontSize:'12px'}}>socketId { reciverSocketId}</span></p>
-        <img src={`${serverUrl}/whatsapp/static/${inputText.dp}`} alt="avatar" width={50} height={50} 
+        <img src={`${serverUrl}/whatsapp/static/assets/user/images/${inputText.dp}`} alt="avatar" width={50} height={50} 
         style={{borderRadius:25,position:'absolute',top:-30,right:5,backgroundColor:'#fff',padding:'2px'}}/>
       </div>
 
@@ -233,6 +251,20 @@ function ChatPage({socket=null}) {
         </button>
       </div>
     </div>
+ {
+  <div style={{marginRight:20,display:show?'block':'none'}}>
+            <div>
+                <p>Local Video</p>
+             <ReactPlayer ref={localStreamRef} autoPlay playsInline muted 
+                style={{width:300,height:200,backgroundColor:'black'}}></ReactPlayer>
+            </div>
+            <div style={{marginLeft:0}}>
+                <p>Remote Video</p>
+                <ReactPlayer ref={remoteStreamRef}
+                autoPlay playsInline style={{width:300,height:200,backgroundColor:'black'}}></ReactPlayer>
+            </div>
+      </div>
+ }
 
  </div>
   );
@@ -299,4 +331,4 @@ const styles = {
     color: "#fff",
     cursor: "pointer",
   },
-};
+}
