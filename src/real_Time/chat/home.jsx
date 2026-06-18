@@ -1,4 +1,4 @@
-import React,{useState,useEffect} from 'react'
+import React,{useState} from 'react'
 import { GetSocket } from './utility/utility.js'
 import Chat from './screens/chat.jsx'
 import axios from 'axios';

@@ -1,13 +1,13 @@
-import React, { useEffect, useState,useRef } from 'react';
-import { GetSocket,formatChatTime } from '../utility/utility';
-import ReactPlayer from 'react-player'
-const serverUrl=import.meta.env.VITE_SERVER_URL
+import React, { useEffect, useState, useRef } from 'react';
+import { formatChatTime } from '../utility/utility';
 
-function ChatPage({socket=null}) {
+const serverUrl = import.meta.env.VITE_SERVER_URL;
+
+function ChatPage({ socket = null }) {
   const [isConnected, setIsConnected] = useState(false);
   const [messages, setMessages] = useState([]);
   const [reciverSocketId, setReciverSocketId] = useState(null);
-  const [show,setShow]=useState(false)
+  const [show, setShow] = useState(false);
   const [inputText, setInputText] = useState({
     text: '',
     conversationId: '68e66b316f3ae4b2aab253f3',
@@ -23,26 +23,28 @@ function ChatPage({socket=null}) {
     })
   );
 
-  const localStreamRef = useRef();
-  const remoteStreamRef = useRef();
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
   const [users, setAllUsers] = useState([]);
 
   // ✅ Get Media
   const getMedia = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video:true,audio: true });
-      
-      if(localStreamRef.current){
-        localStreamRef.current.srcObject=stream
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
       }
-      
+
       stream.getTracks().forEach(track => {
         pc.addTrack(track, stream);
       });
-      
+
       pc.ontrack = (event) => {
         const [remoteStream] = event.streams;
-        remoteStreamRef.current.srcObject = remoteStream;
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = remoteStream;
+        }
       };
 
       pc.onicecandidate = (event) => {
@@ -53,17 +55,22 @@ function ChatPage({socket=null}) {
           });
         }
       };
-      setShow(()=>true)
+      setShow(true);
     } catch (error) {
-      console.error('Error accessing microphone:', error);
+      console.error('Error accessing media devices:', error);
     }
   };
-  // ✅ Stop streamming
-  const stopStream=()=>{
-    localStreamRef.current.srcObject.getTracks().forEach(track => track.stop());
-   setShow(false)
-  }
-    // ✅ Start Call
+
+  // ✅ Stop streaming
+  const stopStream = () => {
+    if (localVideoRef.current?.srcObject) {
+      localVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
+      localVideoRef.current.srcObject = null;
+    }
+    setShow(false);
+  };
+
+  // ✅ Start Call
   const startCall = async () => {
     if (!reciverSocketId) {
       alert('Select a user or ensure reciverSocketId is available');
@@ -71,50 +78,35 @@ function ChatPage({socket=null}) {
     }
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    socket.emit('offer', { offer:pc.localDescription, to: reciverSocketId });
-
+    socket.emit('offer', { offer: pc.localDescription, to: reciverSocketId });
   };
+
   // ✅ Socket Listeners
   useEffect(() => {
-    
-    if (!socket){
-      console.log('socket is not initilize');
+    if (!socket) {
+      console.log('socket is not initialized');
       return;
-    };
-  
-    socket.on('connect', () => {
-      setIsConnected(true);
-    });
+    }
 
-    socket.on('disconnect', () => {
-      setIsConnected(false);
-    });
+    socket.on('connect', () => setIsConnected(true));
+    socket.on('disconnect', () => setIsConnected(false));
 
     socket.on('message', (data) => {
-      // Optional: check if backend sends "from" field for socket ID
-      if (data.from) {
-        setReciverSocketId(data.from);
-      }
-      setMessages((prev) => [...prev, { text: data.text, sender: 'server', time: data.time }]);
+      if (data.from) setReciverSocketId(data.from);
+      setMessages(prev => [...prev, { text: data.text, sender: 'server', time: data.time }]);
     });
 
-    // ✅ OFFER
     socket.on('offer', async ({ offer, from }) => {
-      console.log('offer execute',offer,from)
-      // setReciverSocketId(from);
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      socket.emit('answer', { answer:pc.localDescription, to:from });
+      socket.emit('answer', { answer: pc.localDescription, to: from });
     });
 
-    // ✅ ANSWER
     socket.on('answer', async ({ answer }) => {
-      console.log('answer execute',answer)
       await pc.setRemoteDescription(new RTCSessionDescription(answer));
     });
 
-    // ✅ ICE CANDIDATE
     socket.on('ice-candidate', async ({ candidate }) => {
       try {
         await pc.addIceCandidate(new RTCIceCandidate(candidate));
@@ -131,15 +123,15 @@ function ChatPage({socket=null}) {
       socket.off('answer');
       socket.off('ice-candidate');
       pc.close();
-      localStreamRef.current?.getTracks().forEach(track => track.stop());
-      localStreamRef.current = null;
-      if (remoteStreamRef.current) {
-        remoteStreamRef.current.srcObject = null;
+      if (localVideoRef.current?.srcObject) {
+        localVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
+      }
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = null;
       }
       setIsConnected(false);
     };
   }, [socket, pc]);
-
 
   // ✅ Send Message
   const sendMessage = () => {
@@ -150,13 +142,13 @@ function ChatPage({socket=null}) {
       text: inputText.text.trim(),
       time: new Date().toISOString()
     };
-     try {
-        socket.emit('message', data);
-     } catch (error) {
-      console.log(error)
-     }
-    setMessages((prev) => [...prev, { text: inputText.text, sender: 'me', time: data.time }]);
-    setInputText({ ...inputText, text: '' });
+    try {
+      socket.emit('message', data);
+    } catch (error) {
+      console.log(error);
+    }
+    setMessages(prev => [...prev, { text: inputText.text, sender: 'me', time: data.time }]);
+    setInputText(prev => ({ ...prev, text: '' }));
   };
 
   // ✅ Auto-scroll
@@ -181,109 +173,107 @@ function ChatPage({socket=null}) {
     fetchUsers();
   }, []);
 
-
-
   return (
- <div style={styles.containerMain}>
-  <div style={{width:"200px",background:"#eaea",margin:"40px",borderRadius:"10px",overflowY:"auto",maxHeight:"80vh",padding:"10px"}}>
-    <p>all users list</p>
-    {users.map((user) => (
-      <div key={user._id} onClick={()=>{
-        setInputText({...inputText,reciverId:user._id,chattingWith:user.name,dp:user.dp})
-      }}
-      style={{borderBottom:"1px solid #ddd",flexDirection:"row",display:"flex",padding:"10px"}}>
-        <img 
-          src={user.dp?`${serverUrl}/whatsapp/static/assets/user/images/${user.dp}`: 'https://techtt.site/html/getFile/Assets/icons/profile-icon.jpg'} 
-          alt={user.name} 
-          style={{width:45,height:45,borderRadius:25,marginRight:10}} 
-        />
-        <div>
-          <p><strong>{user.name}</strong></p>
-        <p style={{fontSize:12}}>{user.phone}</p>
-        </div>
-      </div>
-    ))}
-  </div>
-      <div style={styles.container}>
-      <h2>React Chat Page</h2>
-      <div style={{display:'flex',flexDirection:'row',gap:'10px'}}>  
-        <button onClick={getMedia}>Ready to  Call</button>
-        <button onClick={startCall}>Start Call</button>
-        <button onClick={stopStream} >stope streamming</button>
-      </div>
-      {/* Socket info */}
-      <div style={styles.infoBox}>
-        <p>{inputText.chattingWith} ID: {inputText.reciverId || "Connecting..."}</p>
-        <p style={{display:'flex',flexDirection:'row'}}>Status: {isConnected ? "🟢 Connected" : "🔴 Disconnected"},<span style={{fontSize:'12px'}}>socketId { reciverSocketId}</span></p>
-        <img src={`${serverUrl}/whatsapp/static/assets/user/images/${inputText.dp}`} alt="avatar" width={50} height={50} 
-        style={{borderRadius:25,position:'absolute',top:-30,right:5,backgroundColor:'#fff',padding:'2px'}}/>
-      </div>
-
-      {/* Messages */}
-      <div style={styles.chatBox} ref={scrollRef}>
-        {messages.map((msg, index) => (
-          <div
-            key={index}
-            style={{
-              ...styles.message,
-              alignSelf: msg.sender === "me" ? "flex-end" : "flex-start",
-              backgroundColor: msg.sender === "me" ? "#DCF8C6" : "#FFF",
-            }}
-          >
-            <h5>{msg.text}</h5>
-            <div style={{fontSize:10,textAlign:'right',marginTop:4,color:"#555"}}>{msg.time?formatChatTime(msg.time):''}</div>
+    <div style={styles.containerMain}>
+      <div style={{ width: "200px", background: "#eaea", margin: "40px", borderRadius: "10px", overflowY: "auto", maxHeight: "80vh", padding: "10px" }}>
+        <p>all users list</p>
+        {users.map((user) => (
+          <div key={user._id}
+            onClick={() => setInputText(prev => ({ ...prev, reciverId: user._id, chattingWith: user.name, dp: user.dp }))}
+            style={{ borderBottom: "1px solid #ddd", flexDirection: "row", display: "flex", padding: "10px" }}>
+            <img
+              src={user.dp ? `${serverUrl}/whatsapp/static/assets/user/images/${user.dp}` : 'https://techtt.site/html/getFile/Assets/icons/profile-icon.jpg'}
+              alt={user.name}
+              style={{ width: 45, height: 45, borderRadius: 25, marginRight: 10 }}
+            />
+            <div>
+              <p><strong>{user.name}</strong></p>
+              <p style={{ fontSize: 12 }}>{user.phone}</p>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Input */}
-      <div style={styles.inputBox}>
-        <input
-          style={styles.input}
-          type="text"
-          placeholder="Type a message..."
-          value={inputText.text}
-          onChange={(e) => setInputText({...inputText,text:e.target.value})}
-          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-        />
-        <button onClick={sendMessage} style={styles.button}>
-          Send
-        </button>
-      </div>
-    </div>
- {
-  <div style={{marginRight:20,display:show?'block':'none'}}>
-            <div>
-                <p>Local Video</p>
-             <ReactPlayer ref={localStreamRef} autoPlay playsInline muted 
-                style={{width:300,height:200,backgroundColor:'black'}}></ReactPlayer>
-            </div>
-            <div style={{marginLeft:0}}>
-                <p>Remote Video</p>
-                <ReactPlayer ref={remoteStreamRef}
-                autoPlay playsInline style={{width:300,height:200,backgroundColor:'black'}}></ReactPlayer>
-            </div>
-      </div>
- }
+      <div style={styles.container}>
+        <h2>React Chat Page</h2>
+        <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
+          <button onClick={getMedia}>Ready to Call</button>
+          <button onClick={startCall}>Start Call</button>
+          <button onClick={stopStream}>Stop Streaming</button>
+        </div>
 
- </div>
+        <div style={styles.infoBox}>
+          <p>{inputText.chattingWith} ID: {inputText.reciverId || "Connecting..."}</p>
+          <p style={{ display: 'flex', flexDirection: 'row' }}>
+            Status: {isConnected ? "🟢 Connected" : "🔴 Disconnected"},
+            <span style={{ fontSize: '12px' }}>socketId {reciverSocketId}</span>
+          </p>
+          <img
+            src={`${serverUrl}/whatsapp/static/assets/user/images/${inputText.dp}`}
+            alt="avatar" width={50} height={50}
+            style={{ borderRadius: 25, position: 'absolute', top: -30, right: 5, backgroundColor: '#fff', padding: '2px' }}
+          />
+        </div>
+
+        <div style={styles.chatBox} ref={scrollRef}>
+          {messages.map((msg, index) => (
+            <div key={index} style={{
+              ...styles.message,
+              alignSelf: msg.sender === "me" ? "flex-end" : "flex-start",
+              backgroundColor: msg.sender === "me" ? "#DCF8C6" : "#FFF",
+            }}>
+              <h5>{msg.text}</h5>
+              <div style={{ fontSize: 10, textAlign: 'right', marginTop: 4, color: "#555" }}>
+                {msg.time ? formatChatTime(msg.time) : ''}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={styles.inputBox}>
+          <input
+            style={styles.input}
+            type="text"
+            placeholder="Type a message..."
+            value={inputText.text}
+            onChange={(e) => setInputText(prev => ({ ...prev, text: e.target.value }))}
+            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          />
+          <button onClick={sendMessage} style={styles.button}>Send</button>
+        </div>
+      </div>
+
+      {show && (
+        <div style={{ marginRight: 20 }}>
+          <div>
+            <p>Local Video</p>
+            <video ref={localVideoRef} autoPlay playsInline muted
+              style={{ width: 300, height: 200, backgroundColor: 'black' }} />
+          </div>
+          <div style={{ marginLeft: 0 }}>
+            <p>Remote Video</p>
+            <video ref={remoteVideoRef} autoPlay playsInline
+              style={{ width: 300, height: 200, backgroundColor: 'black' }} />
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
 export default ChatPage;
 
-// ✅ Inline styles for simplicity
 const styles = {
-  containerMain:{
-    display:"flex",
-    justifyContent:"flex-start",
-    maxHeight:"100vh",
-    background:"#e2e2e2"
+  containerMain: {
+    display: "flex",
+    justifyContent: "flex-start",
+    maxHeight: "100vh",
+    background: "#e2e2e2"
   },
   container: {
     width: "400px",
     margin: "40px auto",
-    marginTop:"20px",
+    marginTop: "20px",
     border: "1px solid #ddd",
     borderRadius: "10px",
     padding: "10px",
@@ -294,7 +284,7 @@ const styles = {
     marginBottom: "15px",
     fontSize: "14px",
     color: "#444",
-    position:'relative'
+    position: 'relative'
   },
   chatBox: {
     height: "300px",
@@ -331,4 +321,4 @@ const styles = {
     color: "#fff",
     cursor: "pointer",
   },
-}
+};

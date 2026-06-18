@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { getData } from "../utils/axios";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 function View_file() {
   const navigate = useNavigate();
-
   const [data, setData] = useState(null);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -17,8 +18,10 @@ function View_file() {
     };
     fetchData();
   }, []);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
+
   const handleSearch = async () => {
     if (searchTerm.trim() === "") {
       setSearchResults([]);
@@ -92,7 +95,7 @@ function View_file() {
                 {searchResults.map((item, index) => (
                   <li key={index} className="list-item">
                     <a
-                      href={`${BaseUrl}/html/categories/${item}`}
+                      href={`${axios.defaults.baseURL}/html/categories/${item}`}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
@@ -113,20 +116,20 @@ function View_file() {
             paddingRight: 10,
             backgroundColor: "lightblue",
             padding: 5,
-            margonRight: 10,
+            marginRight: 10,
             borderRadius: 5,
           }}
         >
           Upload.
         </a>
       </div>
-      <div className="row-container">
+      <div className="row-container" style={{ backgroundColor: 'rgba(255,255,255,0.4)', borderRadius: '10px' }}>
         {data?.allCategories?.map((item, index) => (
           <button
             key={index}
             className="card"
             onClick={() => {
-              navigate(`/category/${item}`);
+              navigate(`/three/html/view/category/${item}`);
             }}
           >
             <h4 className="card-title">{item}</h4>

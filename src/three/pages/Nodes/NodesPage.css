@@ -1,0 +1,20 @@
+/* ─── Breadcrumb ─── */
+.breadcrumb {
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: 2px; margin-bottom: 16px; font-size: 13px;
+  background: #fff; padding: 10px 16px;
+  border-radius: var(--radius); border: 1px solid var(--gray-200);
+}
+.bc-item {
+  background: none; border: none; color: var(--blue);
+  cursor: pointer; font-size: 13px; padding: 0 2px;
+  font-weight: 500;
+}
+.bc-item:hover { text-decoration: underline; }
+.bc-sep { color: var(--gray-300); padding: 0 2px; }
+
+/* ─── Table actions ─── */
+.table-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+/* ─── Node form ─── */
+.form-stack { display: flex; flex-direction: column; gap: 16px; }

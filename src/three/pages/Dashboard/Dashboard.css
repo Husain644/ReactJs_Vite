@@ -1,0 +1,50 @@
+/* ─── Dashboard grid ─── */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  align-items: start; /* cards don't stretch to match tallest */
+}
+@media (max-width: 1000px) { .dashboard-grid { grid-template-columns: 1fr; } }
+
+/* ─── Quick Actions ─── */
+.quick-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.quick-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 13px 14px; border-radius: 8px; border: 1px solid var(--gray-200);
+  font-size: 13px; font-weight: 500; color: var(--gray-700);
+  transition: var(--transition); cursor: pointer;
+}
+.quick-item:hover { border-color: var(--blue); background: var(--blue-light); color: var(--blue); }
+.quick-icon {
+  width: 34px; height: 34px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; flex-shrink: 0;
+}
+
+/* ─── Node rows ─── */
+.node-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 0; border-bottom: 1px solid var(--gray-100);
+}
+.node-row:last-child { border-bottom: none; }
+.node-row-info      { flex: 1; min-width: 0; }
+.node-row-title     { font-size: 13.5px; font-weight: 600; color: var(--gray-900); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.node-row-slug      { font-size: 11px; color: var(--gray-400); font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ─── Architecture tree ─── */
+.arch-tree { display: flex; flex-direction: column; gap: 4px; }
+.arch-line {
+  font-family: var(--mono); font-size: 12px; color: var(--gray-600);
+  white-space: pre-wrap; /* wrap instead of overflow */
+  word-break: break-all;
+  line-height: 1.7;
+}
+
+/* ─── API Status ─── */
+.api-status { display: flex; align-items: center; gap: 14px; padding: 6px 0; }
+.api-status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
