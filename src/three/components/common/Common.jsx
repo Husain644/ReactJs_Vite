@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import './Common.css';
+import { nodeApi } from '../../api/services.js';
 
 // ─── Loader ───────────────────────────────────────────────────────────────────
 export function Loader({ size = 24, center = false }) {
@@ -93,7 +94,7 @@ export function DataTable({ columns, data, loading, onRow }) {
 }
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
-export function Modal({ open, onClose, title, children, width = 560 }) {
+export function Modal({ open, onClose, title, children, width = 560,height=600 }) {
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onClose(); };
     if (open) document.addEventListener('keydown', handler);
@@ -105,7 +106,7 @@ export function Modal({ open, onClose, title, children, width = 560 }) {
     <div className="modal-backdrop" onClick={onClose}>
       <div
         className="modal fade-in"
-        style={{ maxWidth: width }}
+        style={{ maxWidth: width,maxHeight:height,overflow:'scroll' }}
         onClick={e => e.stopPropagation()}
       >
         <div className="modal-header">
@@ -215,9 +216,9 @@ export function Pagination({ page, total, limit, onChange }) {
 }
 
 // ─── PageHeader ───────────────────────────────────────────────────────────────
-export function PageHeader({ title, desc, action }) {
+export function PageHeader({ title, desc, action,style }) {
   return (
-    <div className="page-header">
+    <div className="page-header" style={style}>
       <div>
         <h2 className="page-title">{title}</h2>
         {desc && <p className="page-desc">{desc}</p>}
@@ -230,4 +231,137 @@ export function PageHeader({ title, desc, action }) {
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 export function Skeleton({ h = 20, w = '100%', radius = 6 }) {
   return <div className="skeleton" style={{ height: h, width: w, borderRadius: radius }} />;
+}
+
+// ─── NodeSelect ───────────────────────────────────────────────────────────────
+// Searchable dropdown that loads all root nodes + their children
+// Replaces the raw "paste MongoDB ID" input with a real picker
+
+export function NodeSelect({ value, onChange, placeholder = 'Select a node…', label }) {
+  const [open,    setOpen]    = useState(false);
+  const [nodes,   setNodes]   = useState([]);
+  const [search,  setSearch]  = useState('');
+  const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState(null);
+  const wrapRef = useRef();
+
+  // Load all nodes flat for search
+  useEffect(() => {
+    setLoading(true);
+    nodeApi.getRoots()
+      .then(async res => {
+        const roots = res?.data?.nodes || [];
+        // Also fetch one level of children for each root
+        const childrenRes = await Promise.all(
+          roots.map(n => n.hasChildren
+            ? nodeApi.getChildren(n._id).then(r => r?.data?.children || []).catch(() => [])
+            : Promise.resolve([])
+          )
+        );
+        const flat = [];
+        roots.forEach((r, i) => {
+          flat.push({ ...r, _depth: 0 });
+          childrenRes[i].forEach(c => flat.push({ ...c, _depth: 1 }));
+        });
+        setNodes(flat);
+        // Restore selected label if value exists
+        if (value) {
+          const found = flat.find(n => n._id === value || n.screenId === value);
+          if (found) setSelected(found);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Sync selected when value changes externally
+  useEffect(() => {
+    if (!value) { setSelected(null); return; }
+    const found = nodes.find(n => n._id === value || n.screenId === value);
+    if (found) setSelected(found);
+  }, [value, nodes]);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filtered = nodes.filter(n =>
+    !search || n.title.toLowerCase().includes(search.toLowerCase()) || n.slug?.includes(search.toLowerCase())
+  );
+
+  const handleSelect = (node) => {
+    setSelected(node);
+    onChange(node);   // pass full node object — parent extracts _id or screenId
+    setOpen(false);
+    setSearch('');
+  };
+
+  return (
+    <div className="form-group">
+      {label && <label className="form-label">{label}</label>}
+      <div className="node-select-wrap" ref={wrapRef}>
+        <button
+          type="button"
+          className={`node-select-trigger ${open ? 'open' : ''}`}
+          onClick={() => setOpen(o => !o)}
+        >
+          <span className="nst-left">
+            {selected ? (
+              <>
+                <span className="nst-icon">{selected.icon || (selected.type === 'screen' ? '🖥️' : '📁')}</span>
+                <span>
+                  <span className="nst-text">{selected.title}</span>
+                  <span className="nst-sub"> · {selected.slug}</span>
+                </span>
+              </>
+            ) : (
+              <span className="nst-placeholder">{placeholder}</span>
+            )}
+          </span>
+          <span className={`nst-arrow ${open ? 'open' : ''}`}>▼</span>
+        </button>
+
+        {open && (
+          <div className="node-select-dropdown">
+            <div className="nsd-search-wrap">
+              <input
+                className="nsd-search"
+                placeholder="Search nodes…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="nsd-list">
+              {loading
+                ? <div className="nsd-loading">Loading nodes…</div>
+                : filtered.length === 0
+                ? <div className="nsd-empty">No nodes found</div>
+                : filtered.map(n => (
+                  <div
+                    key={n._id}
+                    className={`nsd-item ${selected?._id === n._id ? 'active' : ''}`}
+                    onClick={() => handleSelect(n)}
+                    style={{ paddingLeft: n._depth === 1 ? 28 : 14 }}
+                  >
+                    <span className="nsd-item-icon">{n.icon || (n.type === 'screen' ? '🖥️' : '📁')}</span>
+                    <div className="nsd-item-info">
+                      <div className="nsd-item-title">{n.title}</div>
+                      <div className="nsd-item-sub">{n.slug}</div>
+                    </div>
+                    <span className="nsd-badge">
+                      <Badge color={n.type === 'screen' ? 'blue' : 'gray'}>{n.type}</Badge>
+                    </span>
+                  </div>
+                ))
+              }
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }

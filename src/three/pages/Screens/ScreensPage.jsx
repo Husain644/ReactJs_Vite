@@ -2,33 +2,45 @@ import { useState } from 'react';
 import { screenApi } from '../../api/services.js';
 import { useApi } from '../../hooks/useApi.js';
 import { useToast } from '../../hooks/useToast.jsx';
-import { PageHeader, Btn, Card, Badge, FormInput, SelectInput, Loader } from '../../components/common/Common.jsx';
+import {
+  PageHeader, Btn, Card, Badge, FormInput, SelectInput, Loader, NodeSelect
+} from '../../components/common/Common.jsx';
 import './ScreensPage.css';
 
-const STATUS_OPTS  = ['draft','published','archived'].map(v=>({value:v,label:v}));
-const TYPE_OPTS    = ['home','article','educational','topicGrid','3d','process','quiz','mixed'].map(v=>({value:v,label:v}));
-const PRESET_OPTS  = ['default','industrial','blueprint','dark'].map(v=>({value:v,label:v}));
-const CARD_OPTS    = ['flat','elevated','outlined'].map(v=>({value:v,label:v}));
+const STATUS_OPTS = ['draft','published','archived'].map(v=>({value:v,label:v}));
+const TYPE_OPTS   = ['home','article','educational','topicGrid','3d','process','quiz','mixed'].map(v=>({value:v,label:v}));
+const PRESET_OPTS = ['default','industrial','blueprint','dark'].map(v=>({value:v,label:v}));
+const CARD_OPTS   = ['flat','elevated','outlined'].map(v=>({value:v,label:v}));
 
 export default function ScreensPage() {
-  const [nodeId,  setNodeId]  = useState('');
-  const [screen,  setScreen]  = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [status,  setStatus]  = useState('draft');
-  const [form,    setForm]    = useState({ screenType:'article', theme:{ preset:'default', cardStyle:'flat', bg:'', accent:'' }, seo:{ title:'', description:'' } });
+  const [selectedNode, setSelectedNode] = useState(null);
+  const [screen,       setScreen]       = useState(null);
+  const [loading,      setLoading]      = useState(false);
+  const [status,       setStatus]       = useState('draft');
+  const [form,         setForm]         = useState({
+    screenType:'article',
+    theme:{ preset:'default', cardStyle:'flat', bg:'', accent:'' },
+    seo:{ title:'', description:'' }
+  });
   const { run, loading: saving } = useApi();
   const toast = useToast();
 
-  const loadScreen = async () => {
-    if (!nodeId.trim()) return;
+  const handleNodeSelect = async (node) => {
+    setSelectedNode(node);
+    setScreen(null);
+    if (!node?._id) return;
     setLoading(true);
     try {
-      const res = await screenApi.getByNode(nodeId.trim());
+      const res = await screenApi.getByNode(node._id);
       const s   = res?.data?.screen;
       setScreen(s);
       if (s) {
         setStatus(s.status || 'draft');
-        setForm({ screenType: s.screenType || 'article', theme: s.theme || {}, seo: s.seo || {} });
+        setForm({
+          screenType: s.screenType || 'article',
+          theme: s.theme || {},
+          seo:   s.seo   || {},
+        });
       }
     } catch { setScreen(null); }
     finally { setLoading(false); }
@@ -36,7 +48,7 @@ export default function ScreensPage() {
 
   const createScreen = async () => {
     try {
-      const res = await run(screenApi.create, { nodeId: nodeId.trim(), ...form, status });
+      const res = await run(screenApi.create, { nodeId: selectedNode._id, ...form, status });
       setScreen(res?.data?.screen);
       toast.success('Screen created');
     } catch (e) { toast.error(e.message); }
@@ -45,88 +57,130 @@ export default function ScreensPage() {
   const updateScreen = async () => {
     try {
       await run(screenApi.update, screen._id, form);
-      toast.success('Screen updated');
-    } catch (e) { toast.error(e.message); }
-  };
-
-  const publishScreen = async () => {
-    try {
       await run(screenApi.setStatus, screen._id, status);
-      setScreen(s => ({ ...s, status }));
-      toast.success(`Screen set to ${status}`);
+      setScreen(s => ({ ...s, status, ...form }));
+      toast.success('Screen saved');
     } catch (e) { toast.error(e.message); }
   };
 
-  const setTheme = (key, val) => setForm(f => ({ ...f, theme: { ...f.theme, [key]: val } }));
-  const setSeo   = (key, val) => setForm(f => ({ ...f, seo:   { ...f.seo,   [key]: val } }));
+  const setTheme = (k, v) => setForm(f => ({ ...f, theme: { ...f.theme, [k]: v } }));
+  const setSeo   = (k, v) => setForm(f => ({ ...f, seo:   { ...f.seo,   [k]: v } }));
+
+  const copyId = (id) => { navigator.clipboard.writeText(id); toast.success('ID copied'); };
 
   return (
     <div className="fade-in">
       <PageHeader title="Screens" desc="One screen per node — controls layout type, theme, and SEO" />
 
-      <Card title="Lookup Screen by Node ID" style={{ marginBottom: 16 }}>
-        <div style={{ display:'flex', gap:10 }}>
-          <FormInput label="Node ID" value={nodeId} onChange={e => setNodeId(e.target.value)} placeholder="MongoDB ObjectId" />
-          <div style={{ alignSelf:'flex-end' }}>
-            <Btn onClick={loadScreen} loading={loading}>Load</Btn>
-          </div>
-        </div>
+      {/* Node picker — no more manual ID paste */}
+      <Card style={{ marginBottom: 20 }}>
+        <NodeSelect
+          label="Select Node"
+          placeholder="Search and pick a node to manage its screen…"
+          value={selectedNode?._id}
+          onChange={handleNodeSelect}
+        />
       </Card>
 
       {loading && <Loader center />}
 
-      {!loading && nodeId && (
-        <div className="screens-grid">
-          {/* Screen info */}
-          <Card title={screen ? 'Screen Config' : 'No Screen Found'}>
-            {screen ? (
-              <div className="screen-meta">
-                <div className="sm-row"><span>ID</span><code>{screen._id}</code></div>
-                <div className="sm-row"><span>Type</span><Badge color="blue">{screen.screenType}</Badge></div>
-                <div className="sm-row"><span>Status</span><Badge color={screen.status==='published'?'green':screen.status==='archived'?'red':'gray'}>{screen.status}</Badge></div>
-                <div className="sm-row"><span>Version</span>{screen.version}</div>
-              </div>
-            ) : (
-              <div style={{ textAlign:'center', padding:24 }}>
-                <p style={{ color:'var(--gray-500)', marginBottom:16 }}>No screen linked to this node.</p>
-                <Btn onClick={createScreen} loading={saving}>Create Screen</Btn>
-              </div>
-            )}
-          </Card>
+      {!loading && selectedNode && (
+        <div className="screens-layout">
 
-          {screen && (
-            <>
-              {/* Edit form */}
-              <Card title="Edit Screen">
+          {/* Left: Screen info + status */}
+          <div className="screens-col screens-col-left">
+            <Card title={screen ? 'Screen' : 'No Screen Yet'}>
+              {screen ? (
                 <div className="form-stack">
-                  <SelectInput label="Screen Type" value={form.screenType} onChange={e=>setForm(f=>({...f,screenType:e.target.value}))} options={TYPE_OPTS} />
-                  <div className="form-row">
-                    <SelectInput label="Theme Preset" value={form.theme?.preset||'default'} onChange={e=>setTheme('preset',e.target.value)} options={PRESET_OPTS} />
-                    <SelectInput label="Card Style"   value={form.theme?.cardStyle||'flat'} onChange={e=>setTheme('cardStyle',e.target.value)} options={CARD_OPTS} />
+                  {/* ID with copy button */}
+                  <div className="info-box">
+                    <div className="info-box-row">
+                      <span className="info-label">Screen ID</span>
+                      <button className="info-copy-btn" onClick={() => copyId(screen._id)}>Copy</button>
+                    </div>
+                    <div className="info-value">{screen._id}</div>
                   </div>
-                  <div className="form-row">
-                    <FormInput label="BG Color" value={form.theme?.bg||''} onChange={e=>setTheme('bg',e.target.value)} placeholder="#ffffff" />
-                    <FormInput label="Accent"   value={form.theme?.accent||''} onChange={e=>setTheme('accent',e.target.value)} placeholder="#2563eb" />
+
+                  <div className="info-box">
+                    <div className="info-box-row">
+                      <span className="info-label">Status</span>
+                      <Badge color={screen.status==='published'?'green':screen.status==='archived'?'red':'amber'}>
+                        {screen.status}
+                      </Badge>
+                    </div>
+                    <div className="info-box-row" style={{marginTop:4}}>
+                      <span className="info-label">Version</span>
+                      <span className="info-value">v{screen.version}</span>
+                    </div>
+                    <div className="info-box-row" style={{marginTop:4}}>
+                      <span className="info-label">Type</span>
+                      <Badge color="blue">{screen.screenType}</Badge>
+                    </div>
                   </div>
-                  <FormInput label="SEO Title"       value={form.seo?.title||''}       onChange={e=>setSeo('title',e.target.value)} />
-                  <FormInput label="SEO Description" value={form.seo?.description||''} onChange={e=>setSeo('description',e.target.value)} type="textarea" />
-                  <div className="form-actions">
-                    <Btn onClick={updateScreen} loading={saving}>Update</Btn>
-                  </div>
+
+                  <SelectInput
+                    label="Publish Status"
+                    value={status}
+                    onChange={e => setStatus(e.target.value)}
+                    options={STATUS_OPTS}
+                  />
                 </div>
-              </Card>
-
-              {/* Publish */}
-              <Card title="Publish Status">
-                <div className="form-stack">
-                  <SelectInput label="Status" value={status} onChange={e=>setStatus(e.target.value)} options={STATUS_OPTS} />
-                  <Btn onClick={publishScreen} loading={saving}
-                    variant={status==='published'?'success':status==='archived'?'danger':'ghost'}>
-                    Set to {status}
+              ) : (
+                <div className="screens-empty">
+                  <div className="screens-empty-icon">🖥️</div>
+                  <p>No screen linked to <strong>{selectedNode.title}</strong> yet.</p>
+                  <Btn onClick={createScreen} loading={saving} style={{marginTop:14}}>
+                    Create Screen
                   </Btn>
                 </div>
+              )}
+            </Card>
+          </div>
+
+          {/* Right: Edit form */}
+          {screen && (
+            <div className="screens-col screens-col-right">
+              <Card title="Screen Config">
+                <div className="form-stack">
+                  <SelectInput
+                    label="Screen Type"
+                    value={form.screenType}
+                    onChange={e => setForm(f => ({...f, screenType: e.target.value}))}
+                    options={TYPE_OPTS}
+                  />
+
+                  <div className="screens-section-label">Theme</div>
+                  <div className="form-row">
+                    <SelectInput label="Preset"     value={form.theme?.preset||'default'}    onChange={e=>setTheme('preset',e.target.value)}    options={PRESET_OPTS} />
+                    <SelectInput label="Card Style" value={form.theme?.cardStyle||'flat'}     onChange={e=>setTheme('cardStyle',e.target.value)} options={CARD_OPTS} />
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">BG Color</label>
+                      <div className="color-input-row">
+                        <input type="color" value={form.theme?.bg||'#ffffff'} onChange={e=>setTheme('bg',e.target.value)} className="color-swatch" />
+                        <input className="form-input" value={form.theme?.bg||''} onChange={e=>setTheme('bg',e.target.value)} placeholder="#ffffff" />
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Accent Color</label>
+                      <div className="color-input-row">
+                        <input type="color" value={form.theme?.accent||'#2563eb'} onChange={e=>setTheme('accent',e.target.value)} className="color-swatch" />
+                        <input className="form-input" value={form.theme?.accent||''} onChange={e=>setTheme('accent',e.target.value)} placeholder="#2563eb" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="screens-section-label">SEO</div>
+                  <FormInput label="SEO Title"       value={form.seo?.title||''}       onChange={e=>setSeo('title',e.target.value)} placeholder="Page title for sharing" />
+                  <FormInput label="SEO Description" value={form.seo?.description||''} onChange={e=>setSeo('description',e.target.value)} type="textarea" placeholder="Brief description" />
+
+                  <div className="form-actions">
+                    <Btn onClick={updateScreen} loading={saving}>Save All Changes</Btn>
+                  </div>
+                </div>
               </Card>
-            </>
+            </div>
           )}
         </div>
       )}

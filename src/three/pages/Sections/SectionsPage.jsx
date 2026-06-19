@@ -1,41 +1,62 @@
-import { useState, useEffect, useCallback } from 'react';
-import { sectionApi, screenApi, nodeApi } from '../../api/services.js';
+import { useState, useCallback } from 'react';
+import { sectionApi, screenApi } from '../../api/services.js';
 import { useApi } from '../../hooks/useApi.js';
 import { useToast } from '../../hooks/useToast.jsx';
 import {
   PageHeader, Btn, Card, Badge, DataTable, Drawer,
-  ConfirmDialog, FormInput, SelectInput, Empty
+  ConfirmDialog, NodeSelect, Loader
 } from '../../components/common/Common.jsx';
 import SectionForm from './SectionForm.jsx';
 import './SectionsPage.css';
 
-const SECTION_TYPES = [
-  'header','footer','heading','subheading','text','image','gallery','banner',
-  'cards','accordion','timeline','stepper','table','formula','equation',
-  'comparison','diagram','3dModel','video','audio','pdf','quiz',
-  'tip','warning','button','links','divider','spacer','relatedTopics',
-];
-
 const TYPE_BADGE_COLOR = {
-  heading:'blue', text:'gray', image:'green', cards:'blue',
-  '3dModel':'amber', quiz:'amber', tip:'green', warning:'red',
+  heading:'blue', subheading:'blue', text:'gray', image:'green', gallery:'green',
+  cards:'blue', banner:'purple', accordion:'gray', timeline:'gray',
+  stepper:'purple', table:'gray', formula:'amber', '3dModel':'amber',
+  video:'purple', pdf:'gray', quiz:'amber', tip:'green', warning:'red',
 };
 
 export default function SectionsPage() {
-  const [screenId,    setScreenId]    = useState('');
-  const [sections,    setSections]    = useState([]);
-  const [loading,     setLoading]     = useState(false);
-  const [editSection, setEditSection] = useState(null);
-  const [createOpen,  setCreateOpen]  = useState(false);
-  const [deleteItem,  setDeleteItem]  = useState(null);
+  const [selectedNode, setSelectedNode] = useState(null);
+  const [screenId,     setScreenId]     = useState('');
+  const [screenInfo,   setScreenInfo]   = useState(null);
+  const [sections,     setSections]     = useState([]);
+  const [loading,      setLoading]      = useState(false);
+  const [editSection,  setEditSection]  = useState(null);
+  const [createOpen,   setCreateOpen]   = useState(false);
+  const [deleteItem,   setDeleteItem]   = useState(null);
   const { run: runDel, loading: deleting } = useApi();
   const toast = useToast();
 
-  const load = useCallback(async () => {
-    if (!screenId.trim()) return;
+  const handleNodeSelect = async (node) => {
+    setSelectedNode(node);
+    setSections([]);
+    setScreenId('');
+    setScreenInfo(null);
+    if (!node?._id) return;
+
     setLoading(true);
     try {
-      const res = await sectionApi.getByScreen(screenId.trim());
+      // Get screen for this node
+      const res = await screenApi.getByNode(node._id);
+      const screen = res?.data?.screen;
+      if (!screen) { toast.info('No screen linked to this node yet'); setLoading(false); return; }
+
+      setScreenId(screen._id);
+      setScreenInfo(screen);
+
+      // Load sections
+      const secRes = await sectionApi.getByScreen(screen._id);
+      setSections(secRes?.data?.sections || []);
+    } catch (e) { toast.error(e.message); }
+    finally { setLoading(false); }
+  };
+
+  const reload = useCallback(async () => {
+    if (!screenId) return;
+    setLoading(true);
+    try {
+      const res = await sectionApi.getByScreen(screenId);
       setSections(res?.data?.sections || []);
     } catch (e) { toast.error(e.message); }
     finally { setLoading(false); }
@@ -46,21 +67,26 @@ export default function SectionsPage() {
       await runDel(sectionApi.delete, deleteItem._id);
       toast.success('Section hidden');
       setDeleteItem(null);
-      load();
+      reload();
     } catch (e) { toast.error(e.message); }
   };
 
+  const copyId = (id) => { navigator.clipboard.writeText(id); toast.success('Copied'); };
+
   const COLS = [
-    { key: 'order', label: '#', render: v => <span style={{fontFamily:'var(--mono)',fontSize:12}}>{v}</span> },
-    { key: 'type',  label: 'Type', render: v => <Badge color={TYPE_BADGE_COLOR[v]||'gray'}>{v}</Badge> },
-    { key: 'variant', label: 'Variant', render: v => v || 'default' },
-    { key: 'sectionKey', label: 'Key', render: v => v ? <span style={{fontFamily:'var(--mono)',fontSize:11}}>{v}</span> : '—' },
-    { key: 'isLazy',  label: 'Lazy', render: v => v ? <Badge color="amber">lazy</Badge> : <Badge color="green">eager</Badge> },
-    { key: 'isVisible', label: 'Visible', render: v => v ? '✓' : <span style={{color:'var(--red)'}}>hidden</span> },
+    { key: 'order',  label: '#',       render: v => <span style={{fontFamily:'var(--mono)',fontSize:12,color:'var(--gray-500)'}}>{v}</span> },
+    { key: 'type',   label: 'Type',    render: v => <Badge color={TYPE_BADGE_COLOR[v]||'gray'}>{v}</Badge> },
+    { key: 'variant',label: 'Variant', render: v => v !== 'default' ? v : <span style={{color:'var(--gray-400)'}}>default</span> },
+    { key: 'sectionKey', label: 'Key', render: v => v ? <span style={{fontFamily:'var(--mono)',fontSize:11,color:'var(--blue)'}}>{v}</span> : '—' },
+    { key: 'isLazy',    label: 'Load',    render: v => v ? <Badge color="amber">lazy</Badge> : <Badge color="green">eager</Badge> },
+    { key: 'isVisible', label: 'Visible', render: v => v
+        ? <span style={{color:'var(--green)',fontWeight:600}}>✓</span>
+        : <span style={{color:'var(--red)'}}>hidden</span>
+    },
     { key: '_id', label: 'Actions', render: (_, row) => (
       <div className="table-actions">
         <Btn size="sm" variant="ghost" onClick={() => setEditSection(row)}>Edit</Btn>
-        <Btn size="sm" variant="danger" onClick={() => setDeleteItem(row)}>Del</Btn>
+        <Btn size="sm" variant="danger" onClick={() => setDeleteItem(row)}>Hide</Btn>
       </div>
     )},
   ];
@@ -69,56 +95,75 @@ export default function SectionsPage() {
     <div className="fade-in">
       <PageHeader
         title="Sections"
-        desc="Content blocks — enter a Screen ID to manage its sections"
+        desc="Pick a node — its sections load automatically"
         action={
-          <Btn onClick={() => setCreateOpen(true)} icon="＋" disabled={!screenId.trim()}>Add Section</Btn>
+          <Btn onClick={() => setCreateOpen(true)} disabled={!screenId} icon="＋">
+            Add Section
+          </Btn>
         }
       />
 
-      <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <div style={{ flex: 1 }}>
-            <FormInput
-              label="Screen ID"
-              value={screenId}
-              onChange={e => setScreenId(e.target.value)}
-              placeholder="MongoDB ObjectId of the screen"
-            />
+      {/* Node picker */}
+      <Card style={{ marginBottom: 20 }}>
+        <NodeSelect
+          label="Select Node"
+          placeholder="Pick a node to load its sections…"
+          value={selectedNode?._id}
+          onChange={handleNodeSelect}
+        />
+
+        {/* Screen info pill — shown after selection */}
+        {screenInfo && (
+          <div className="sections-screen-pill">
+            <div className="ssp-left">
+              <span className="ssp-label">Screen</span>
+              <span className="ssp-id">{screenInfo._id}</span>
+            </div>
+            <div className="ssp-right">
+              <Badge color={screenInfo.status==='published'?'green':screenInfo.status==='archived'?'red':'amber'}>
+                {screenInfo.status}
+              </Badge>
+              <Badge color="blue">{screenInfo.screenType}</Badge>
+              <button className="info-copy-btn" onClick={() => copyId(screenInfo._id)}>Copy ID</button>
+            </div>
           </div>
-          <div style={{ alignSelf: 'flex-end' }}>
-            <Btn onClick={load} loading={loading}>Load Sections</Btn>
-          </div>
-        </div>
+        )}
       </Card>
 
-      {sections.length > 0 && (
-        <Card title={`Sections (${sections.length})`}>
+      {loading && <Loader center />}
+
+      {!loading && screenId && (
+        <Card title={`Sections — ${sections.length} block${sections.length !== 1 ? 's' : ''}`}>
           <DataTable columns={COLS} data={sections} loading={loading} />
         </Card>
       )}
 
-      {/* Create Drawer */}
-      <Drawer open={createOpen} onClose={() => setCreateOpen(false)} title="Add Section" width={520}>
-        <SectionForm
-          screenId={screenId}
-          onSaved={() => { setCreateOpen(false); load(); }}
-        />
+      {!loading && selectedNode && !screenId && !loading && (
+        <Card>
+          <div style={{textAlign:'center',padding:'32px 16px',color:'var(--gray-400)'}}>
+            <div style={{fontSize:32,marginBottom:12}}>📭</div>
+            <div style={{fontWeight:600,marginBottom:6}}>No screen linked</div>
+            <div style={{fontSize:13}}>Go to Screens page to create a screen for this node first.</div>
+          </div>
+        </Card>
+      )}
+
+      {/* Create */}
+      <Drawer open={createOpen} onClose={() => setCreateOpen(false)} title="Add Section" width={540}>
+        <SectionForm screenId={screenId} onSaved={() => { setCreateOpen(false); reload(); }} />
       </Drawer>
 
-      {/* Edit Drawer */}
-      <Drawer open={!!editSection} onClose={() => setEditSection(null)} title="Edit Section" width={520}>
+      {/* Edit */}
+      <Drawer open={!!editSection} onClose={() => setEditSection(null)} title="Edit Section" width={540}>
         {editSection && (
-          <SectionForm
-            screenId={screenId}
-            section={editSection}
-            onSaved={() => { setEditSection(null); load(); }}
-          />
+          <SectionForm screenId={screenId} section={editSection} onSaved={() => { setEditSection(null); reload(); }} />
         )}
       </Drawer>
 
       <ConfirmDialog
         open={!!deleteItem} onClose={() => setDeleteItem(null)} onConfirm={handleDelete} loading={deleting}
-        title="Hide Section" message={`Hide "${deleteItem?.type}" section? It stays in DB and can be restored.`}
+        title="Hide Section"
+        message={`Hide the "${deleteItem?.type}" section? It stays in the database and can be restored later.`}
       />
     </div>
   );

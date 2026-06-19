@@ -31,7 +31,7 @@ export default function Navbar({ onMenuClick }) {
 
       <div className="navbar-actions">
         <a
-          href="https://www.techtt.site/three/api"
+          href="https://www.techtt.site/html/getFile/docs/threeApp_backend/threeApiTest.html"
           target="_blank"
           rel="noreferrer"
           className="navbar-api-badge"

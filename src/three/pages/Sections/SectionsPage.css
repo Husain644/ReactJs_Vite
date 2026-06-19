@@ -1,2 +1,9 @@
-/* SectionsPage has no dedicated styles — all handled by Common.css */
-/* Reserved for future section-specific overrides */
+.sections-screen-pill {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  margin-top:14px; padding:10px 14px; background:var(--gray-50);
+  border:1px solid var(--gray-200); border-radius:var(--radius-sm); flex-wrap:wrap;
+}
+.ssp-left  { display:flex; align-items:center; gap:8px; min-width:0; }
+.ssp-label { font-size:11px; font-weight:700; color:var(--gray-500); text-transform:uppercase; letter-spacing:0.5px; }
+.ssp-id    { font-family:var(--mono); font-size:12px; color:var(--gray-700); }
+.ssp-right { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
