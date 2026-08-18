@@ -1,9 +1,9 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://www.techtt.site/three/api',
+  baseURL: 'https://www.techt.site/api/content',
   headers: { 'Content-Type': 'application/json' },
-  timeout: 15000,
+  timeout: 5*60*1000,   // that is 5 minutes 
 });
 
 api.interceptors.response.use(

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { svgBack } from '../../assets/icons/svg_icons';
 
 function Edit_file() {
   const location = useLocation();
+  const Navigation = useNavigate();
   const { category, subFolder, f } = location.state;
   const [fileUrlData, setFileUrlData] = useState({
     category,
@@ -57,9 +59,14 @@ function Edit_file() {
     }
   };
 
+  function goBackToCategory() {
+    Navigation(`/html/view/category/${category}`);
+  }
+
   return (
-    <div style={{ backgroundColor: '#fff' }}>
+    <div className="express-view" style={{ backgroundColor: '#fff' }}>
       <div className='editor-header'>
+        <button onClick={goBackToCategory} className='btn' aria-label="Back to file list">{svgBack}</button>
         <p style={{ fontSize: 18, fontWeight: 'bold', width: 150, height: 20 }}>Html File Editor</p>
         <input type="text" className='editor-input'
           value={fileUrlData.category}

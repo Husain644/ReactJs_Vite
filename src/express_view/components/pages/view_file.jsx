@@ -39,6 +39,7 @@ function View_file() {
 
   return (
     <div
+      className="express-view"
       style={{
         display: "flex",
         justifyContent: "center",
@@ -129,7 +130,7 @@ function View_file() {
             key={index}
             className="card"
             onClick={() => {
-              navigate(`/three/html/view/category/${item}`);
+              navigate(`/html/view/category/${item}`);
             }}
           >
             <h4 className="card-title">{item}</h4>

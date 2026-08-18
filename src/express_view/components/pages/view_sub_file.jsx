@@ -35,13 +35,19 @@ function View_sub_file() {
   }
 
   function goEditPage(params) {
-    Navigation('/three/html/view/edit', { state: params });
+    Navigation('/html/view/edit', { state: params });
+  }
+
+  function goBackToFilesView() {
+    Navigation('/html/view');
   }
 
   return (
-    <div className='container' style={{ backgroundColor: '#fff', marginTop: 0, padding: 0 }}>
+    <div className="express-view container" style={{ backgroundColor: '#fff', marginTop: 0, padding: 0 }}>
       <div className='header'>
-        <button onClick={() => Navigation(-1)} className='btn'>{svgBack}</button>
+        <button onClick={goBackToFilesView} className='btn back-btn' aria-label="Back to files view">
+          {svgBack}
+        </button>
         <p className='viewTitle'>{category}</p>
       </div>
 

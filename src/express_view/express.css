@@ -1,10 +1,10 @@
-.row-container-main {   
+.express-view .row-container-main {   
     width: 100%;
     padding: 10px;
     margin-top: 20px;
 }
 
-.row-container {   
+.express-view .row-container {   
      width: 98%;
     display: flex;
     flex-direction: row;
@@ -16,7 +16,7 @@
     margin-top: 10px;
 }
 
-.card {
+.express-view .card {
     flex: 1;
     min-width: 200px;
     max-width: 300px;
@@ -27,14 +27,14 @@
     background-color: #f9f9f9;
     cursor: pointer;
 }
-.card-index{
+.express-view .card-index{
     border: 2px solid rgb(74, 210, 228);
     box-shadow: 5px 5px 5px rgba(74, 210, 228, 0.3);
     min-width: 95%;
     margin: auto;
     background-color: #f1f1f1;
 }
-.header{
+.express-view .header{
     width: 100%;
     height: 50px;
     display: flex;
@@ -44,7 +44,7 @@
      background-color: rgb(74, 210, 228);
     
 }
-.btn{
+.express-view .btn{
     height: 30px;
     width: 70px;
     border-radius: 5px;
@@ -54,14 +54,30 @@
     cursor: pointer;
     overflow: hidden;
 }
-.card-title {
+
+  .express-view .back-btn {
+    width: 52px;
+    min-width: 52px;
+    height: 36px;
+    padding: 4px;
+    background: #fff;
+    border-color: #cbd5e1;
+    flex-shrink: 0;
+  }
+
+  .express-view .back-btn svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+.express-view .card-title {
     font-size: 1.2em;
     color: #333;
     text-transform: capitalize;
     text-align: center;
     font-weight: bold;
 }
-.fileTitle{
+.express-view .fileTitle{
     font-size: 20px;
     font-weight: 600; 
     color:#270202;
@@ -69,7 +85,7 @@
     text-align: center;
     border-radius: 10px;
 }
-.search-btn {
+.express-view .search-btn {
     height: 30px;
     width: 70px;
     margin-left: 10px;
@@ -80,7 +96,7 @@
     cursor: pointer
 }
 
-.list-container {
+.express-view .list-container {
     min-width: 300px;
     height: auto;
     position: absolute;
@@ -100,12 +116,12 @@
     
 }
 
-.list {
+.express-view .list {
 
     list-style-type: square;
 
 }
-.backdrop{
+.express-view .backdrop{
     position: fixed;
     top: 0;
     left: 0;
@@ -115,7 +131,7 @@
     z-index: 99;
 }
 /* view_sub_files.jsx css */
-.viewTitle{
+.express-view .viewTitle{
     font-size:30px;
     text-transform: capitalize;
     font-weight: 600;
@@ -124,7 +140,7 @@
     width: 100%;
     margin-top: 0;
 }
-.link-cpntainer{
+.express-view .link-cpntainer{
     display: flex;
     flex-direction: column;
     gap: 5px;
@@ -132,14 +148,14 @@
     background-color: #fff;
     border-top: 1px solid gray;
 }
-.link-index{
+.express-view .link-index{
     display: flex;
     flex-direction:row;
     gap: 5px;
     justify-content:space-between;
     flex-wrap: wrap;
 }
-.file-link{
+.express-view .file-link{
     color: blue;
     font-size: 15px;
     margin-top: 5px;
@@ -149,7 +165,7 @@
     min-width:200px;
     overflow: hidden;
 }
-.file-index{
+.express-view .file-index{
     min-width: 30%;
     min-width:200px;
     max-width: 400px;
@@ -159,18 +175,18 @@
     cursor: pointer;
     border-bottom: 1px solid rgb(198, 189, 189);
 }
-.p-bullet {
+.express-view .p-bullet {
   position: relative;
   padding-left:10px;
 }
 
-.p-bullet::before {
+.express-view .p-bullet::before {
   content: "•";
   position: absolute;
   left: 0;
   color: black;
 }
-.alertBox{
+.express-view .alertBox{
     position: absolute;
     top:150px;
     right: 50%;
@@ -182,7 +198,7 @@
     border:1px solid #000;
     border-radius: 10px;
 }
-.deleteIcon{
+.express-view .deleteIcon{
     position: absolute;
     top:28px;
     right:10px;
@@ -190,10 +206,10 @@
     width: 30px;
 }
 @media screen and (max-width: 600px) {
-.fileTitle{
+  .express-view .fileTitle{
     font-size: 15px;    
 }
-.file-link{
+  .express-view .file-link{
     font-size: 12px;
 }
 }
@@ -201,13 +217,13 @@
 /* end of view_sub_files.jsx css */
 /* start edit_file css */
 
-.editor-container{
+.express-view .editor-container{
     display: flex;
     flex-direction:row;
     justify-content: space-around;
     width: 100%;
 }
-.editor-header{
+.express-view .editor-header{
     width: 100%;
     max-height: 70px;
     display: flex;
@@ -217,7 +233,7 @@
     background-color: rgb(74, 210, 228);
     gap:5px
 }
-.editor-input{
+.express-view .editor-input{
     font-size: 14px;
     width: 200px;
     background-color: #fff;
@@ -225,7 +241,7 @@
     border-radius: 5px;
     height: 25px;
 }
-.edotor-textarea{
+.express-view .edotor-textarea{
     width:50%;
     min-height: 400px;
     border: 1px solid gray;
@@ -235,7 +251,7 @@
     font-family: 'Courier New', Courier, monospace;
     resize: vertical;
 }
-.editor-iframe{
+.express-view .editor-iframe{
     width:48%;
     min-height: 400px;
     border: 1px solid gray;
@@ -247,20 +263,20 @@
     overflow:auto;
 }
 @media screen and (max-width: 600px) {
-.editor-container{
+  .express-view .editor-container{
     flex-direction: column;
     align-items: center;}
-.editor-header{
+  .express-view .editor-header{
     height: auto;
 }
-.edotor-textarea{
+  .express-view .edotor-textarea{
     width: 90%;
     margin-bottom: 20px;
     }
-.editor-iframe{
+  .express-view .editor-iframe{
     width: 90%;
 }
-.editor-input{
+.express-view .editor-input{
     max-width:150px;
     height: 18px;
     font-size: 12px;
@@ -270,7 +286,7 @@
 
 
 /* view_sub_files */
-.header {
+.express-view .header {
   width: 100%;
   height: 48px;
   display: flex;
@@ -280,13 +296,13 @@
   background-color: #fff;
   border-bottom: 0.5px solid #e0e0e0;
 }
-.viewTitle {
+.express-view .viewTitle {
   font-size: 15px;
   font-weight: 500;
   color: #111;
   text-transform: capitalize;
 }
-.btn {
+.express-view .btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -297,14 +313,14 @@
   background: transparent;
   cursor: pointer;
 }
-.row-container-main {
+.express-view .row-container-main {
   width: 100%;
   padding: 10px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-.card-index {
+.express-view .card-index {
   width: 98%;
   margin: 0 auto;
   background-color: #fff;
@@ -312,7 +328,7 @@
   border-radius: 10px;
   overflow: hidden;
 }
-.card-index-header {
+.express-view .card-index-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -320,7 +336,7 @@
   background-color: #f7f7f7;
   border-bottom: 0.5px solid #e0e0e0;
 }
-.fileTitle {
+.express-view .fileTitle {
   font-size: 13px;
   font-weight: 500;
   color: #111;
@@ -328,11 +344,11 @@
 }
 
 /* 3-col file grid */
-.link-container {
+.express-view .link-container {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
 }
-.file-row {
+.express-view .file-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -343,8 +359,8 @@
   min-width: 0;
   margin-top: 5px;
 }
-.file-row:hover { background-color: #f9f9f9; }
-.file-link {
+.express-view .file-row:hover { background-color: #f9f9f9; }
+.express-view .file-link {
   font-size: 15px;
   color: #1a56db;
   text-decoration: none;
@@ -354,14 +370,14 @@
   flex: 1;
   min-width: 0;
 }
-.file-actions {
+.express-view .file-actions {
   display: flex;
   align-items: center;
   gap: 2px;
 
   flex-shrink: 0;
 }
-.icon-btn {
+.express-view .icon-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -375,7 +391,7 @@
 }
 
 /* alert */
-.alertBox {
+.express-view .alertBox {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.45);
@@ -384,7 +400,7 @@
   justify-content: center;
   z-index: 999;
 }
-.alertInner {
+.express-view .alertInner {
   background: #fff;
   border-radius: 12px;
   padding: 20px;
@@ -396,10 +412,10 @@
 }
 
 @media (max-width: 600px) {
-  .link-container {
+  .express-view .link-container {
     grid-template-columns: 1fr;
   }
-  .file-row {
+  .express-view .file-row {
     border-right: none;
   }
 }

@@ -3,6 +3,7 @@ import {
   BrowserRouter as Router,
   Routes,
   Route,
+  Navigate,
 } from 'react-router-dom';
 
 import axios from 'axios';
@@ -14,35 +15,40 @@ import ThreeHome from './three/home.jsx';
 import HomeChat from './real_Time/chat/home';
 import VideoCall from './real_Time/chat/components/videocall';
 
-axios.defaults.baseURL = 'https://www.techtt.site';
+axios.defaults.baseURL = 'https://www.techt.site';
 
 const AllLinks = [
   {
     name: 'Files Manager',
-    path: '/three/html/view/*',
+    path: '/html/view/*',
     component: Home,
   },
   {
     name: 'Chat',
-    path: '/three/chat/*',
+    path: '/chat/*',
     component: HomeChat,
   },
   {
     name: 'Video Call',
-    path: '/three/video-call',
+    path: '/video-call',
     component: VideoCall,
   },
   {
     name: 'Three',
-    path: '/three/*',
+    path: '/three3D/*',  // This matches the nested routes
     component: ThreeHome,
   },
 ];
 
 function App() {
   return (
-    <Router>
+    <Router basename="/three">
       <Routes>
+        <Route
+          path="/"
+          element={<Navigate to="/all" replace />}
+        />
+
         <Route
           path="/all"
           element={<LinksTable routes={AllLinks} />}
@@ -59,6 +65,10 @@ function App() {
             />
           );
         })}
+
+        {/* Catch-all: anything that doesn't match falls back to /all
+            instead of rendering a blank "not found" screen */}
+        <Route path="*" element={<Navigate to="/all" replace />} />
       </Routes>
     </Router>
   );
